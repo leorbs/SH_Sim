@@ -1,0 +1,15 @@
+
+var data = stream
+    |from()
+        .database('smartHomeTest')
+        .measurement('sh1')
+        .groupBy('Raum')
+    |eval(lambda: "Temperature")
+        .as('value')
+    |alert()
+        .crit(lambda: "value" < 14)
+        .message('Das {{ index .Tags "Raum" }} ist zu kalt. Es hat nur {{ index .Fields "value" }}Grad Celsius dort. Bitte überprüfe die Heizung und das Fenster.')
+        .messageField('message')
+        .telegram()
+        .chatId('531902090')
+        .parseMode('Markdown')

@@ -1,0 +1,51 @@
+var window_size = 1m
+
+var sh1 = stream
+    |from()
+        .database('smartHomeTest')
+        .measurement('sh1')
+        .groupBy('Raum')
+    |window()
+        .period(window_size)
+        .every(window_size)
+        .align()
+    |mean('Temperature')
+        .as('Temperature')
+
+var sh_sensorSet2 = stream
+    |from()
+        .database('smartHomeTest')
+        .measurement('sh_sensorSet2')
+        .groupBy('Raum')
+    |window()
+        .period(window_size)
+        .every(window_size)
+        .align()
+    |mean('Temperature')
+        .as('Temperature')
+
+var data = sh1
+    |join(sh_sensorSet2) //Add both streams together
+        .as('sh1', 'sh_sensorSet2')
+    |eval(lambda: "sh_sensorSet2.Temperature" - "sh1.Temperature")
+        .as('value_diff')
+        .keep()
+
+data
+    |influxDBOut()
+        .measurement('diffs')
+        .database('smartHomeTest')
+        .create()
+data
+   |eval(lambda: if("value_diff" > 0, "value_diff", -"value_diff"))
+        .as('absolute_diff')
+        .keep()
+   |alert()
+        // if too much deviation
+        .crit(lambda: "absolute_diff" > 10)
+        .message('Der Unterschied zwischen den Sensoren in der / dem {{ index .Tags "Raum" }} ist größer als 10 Grad Celsius. Bitte die Temperatursensoren überprüfen.')
+
+        .messageField('message')
+        .telegram()
+        .chatId('531902090')
+        .parseMode('Markdown')

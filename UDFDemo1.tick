@@ -1,0 +1,10 @@
+var data = stream
+    |from()
+        .database('smartHomeTest')
+        .measurement('sh1')
+        .where(lambda: "Raum" == 'Bad')
+	@pythonTest()
+    |influxDBOut()
+        .measurement('fromPython')
+        .database('smartHomeTest')
+        .create()
